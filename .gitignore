@@ -1,3 +1,6 @@
+.idea
+__pycache__
 /data
 /prediction_result
 /saved_models
+db.sqlite3
