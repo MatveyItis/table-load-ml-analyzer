@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <title>Forecasting in action!</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+</head>
+<body>
+<div class="options-class" style="position: relative;">
+    <p>Please select schema, table and query type:</p>
+    <form id="init-form">
+        <label for="schemas">Schema</label>
+        <select id="schemas">
+        </select>
+        <label for="tables">Table</label>
+        <select id="tables">
+        </select>
+        <label for="qtypes">Query</label>
+        <select id="qtypes">
+            <option value="SELECT">select</option>
+            <option value="INSERT">insert</option>
+            <option value="UPDATE">update</option>
+            <option value="DELETE">delete</option>
+        </select>
+        <button type="submit">Predict</button>
+    </form>
+</div>
+<div>
+    <canvas id="chart" width="600" height="300"></canvas>
+</div>
+
+<script>
+
+    window.addEventListener("load", function () {
+        const form = document.getElementById('init-form');
+        console.log('load listener')
+        form.addEventListener('submit', e => sendData(e));
+        fillData();
+        const schemaSelect = document.getElementById('schemas');
+        schemaSelect.addEventListener('change', fillTables);
+    });
+
+    async function fillData() {
+        try {
+            const response = await fetch('/database/schema');
+            const data = await response.text();
+            const schemas = data.substr(1, data.length - 2).split(',');
+            for (let i = 0; i < schemas.length; i++) {
+                schemas[i] = schemas[i].substr(1, schemas[i].length - 2);
+            }
+            console.log(schemas);
+            const schemasElem = document.getElementById('schemas');
+            schemas.forEach(function (item) {
+                const newOption = document.createElement("option");
+                newOption.text = item.toString();
+                newOption.value = item.toString();
+                schemasElem.add(newOption)
+            });
+            await fillTables();
+        } catch (err) {
+            console.log(err)
+        }
+    }
+
+    async function fillTables() {
+        const schemasElem = document.getElementById('schemas');
+        const selected = schemasElem.value;
+        const response = await fetch('/database/schema?schema=' + selected);
+        const data = await response.text();
+        const tables = data.substr(1, data.length - 2).split(',');
+        for (let i = 0; i < tables.length; i++) {
+            tables[i] = tables[i].substr(1, tables[i].length - 2);
+        }
+        console.log(tables);
+        const tablesElem = document.getElementById('tables');
+        tablesElem.options.length = 0;
+        tables.forEach(function (item) {
+            const newOption = document.createElement("option");
+            newOption.text = item.toString();
+            newOption.value = item.toString();
+            tablesElem.add(newOption)
+        });
+    }
+
+    function sendData(event) {
+        console.log('send data function')
+        event.preventDefault();
+        chartIt();
+    }
+
+    async function chartIt() {
+        const data = await getData();
+        const existingChart = window.myCharts === undefined ? undefined : window.myCharts[0];
+        if (existingChart !== undefined) {
+            existingChart.config.data.datasets[0].data = data.ys;
+            existingChart.config.data.datasets[1].data = data.yhat;
+            existingChart.update();
+        } else {
+            const canvas = document.getElementById('chart');
+            const ctx = canvas.getContext('2d');
+            const config = {
+                type: 'line',
+                axis: 'x',
+                responsive: true,
+                maintainAspectRatio: true,
+                data: {
+                    labels: data.xs,
+                    datasets: [{
+                        label: 'Load of table by select queries',
+                        data: data.ys,
+                        fill: false,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Prediction value',
+                        data: data.yhat,
+                        fill: false,
+                        backgroundColor: 'rgba(246, 71, 71, 0.5)',
+                        borderColor: 'rgba(246, 71, 71, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                callback: function (value, index, values) {
+                                    return value;
+                                }
+                            }
+                        }]
+                    }
+                }
+            }
+            const myChart = new Chart(ctx, config);
+            window.myCharts = [myChart];
+            console.log("Created chart");
+        }
+    }
+
+    async function getData() {
+        const xs = []
+        const ys = []
+        const yhat = []
+
+        const schema = document.getElementById('schemas').value;
+        const tableName = document.getElementById('tables').value;
+        const queryType = document.getElementById('qtypes').value;
+        //const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
+        const response = await fetch('forecast/result?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
+        const data = await response.text();
+
+        const cols = data.split('\n').slice(0, 1);
+        console.log(cols)
+        const table = data.split('\n').slice(1);
+        table.forEach(row => {
+            const cols = row.split(',');
+            const time = cols[0];
+            xs.push(time)
+            const value = cols[16];
+            if (value !== '0') {
+                ys.push(value)
+            }
+            const yh = cols[15];
+            yhat.push(yh);
+            //console.log(time, value, yh);
+        });
+        ys.filter(function (value, index, arr) {
+            return value > 0;
+        });
+        return {xs, ys, yhat}
+    }
+</script>
+</body>
+</html>
