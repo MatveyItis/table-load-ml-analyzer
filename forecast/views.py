@@ -45,15 +45,8 @@ def forecast_data(request):
         schema_name = request.GET.get('schemaName')
         table_name = request.GET.get('tableName')
         query_type = request.GET.get('queryType')
-        model_prefix = schema_name + '_' + table_name + '_' + query_type
-        model_file_name = model_prefix + '_model.json'
-        if os.path.isfile('saved_models/' + model_file_name):
-            return HttpResponse(pr.make_prediction(model_file_prefix=model_prefix, use_cache=True))
-        else:
-            # csv_file = get_file_with_stat(schema_name, table_name, query_type)
-            # df = pd.DataFrame([x.split(',') for x in csv_file.split('\n')])
-            df = pd.read_csv('data/select_test.csv')
-            return HttpResponse(pr.make_prediction(data=df, model_file_prefix=model_prefix))
+        pr.start_learning(schema_name, table_name, query_type)
+        return HttpResponse(status=201)
     return render(request, 'forecast.html')
 
 
@@ -63,6 +56,5 @@ def get_prediction_result(request):
         table_name = request.GET.get('tableName')
         query_type = request.GET.get('queryType')
         model_prefix = schema_name + '_' + table_name + '_' + query_type
-        pr.start_learning(schema_name, table_name, query_type)
         return pr.read_prediction_result(model_prefix)
     return render(request, 'forecast.html')

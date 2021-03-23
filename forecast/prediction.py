@@ -1,11 +1,10 @@
 import json
 import os
 import pandas as pd
-import csv
 from django.http import HttpResponse
 from fbprophet import Prophet
 from fbprophet.serialize import model_to_json, model_from_json
-from multiprocessing import Pool, Process
+from multiprocessing import Process
 from . import analyzer_feign as af
 
 pd.options.mode.chained_assignment = None
@@ -113,7 +112,6 @@ def make_prediction(data=None, model_file_prefix='', schema='', table='', query_
             return m.history
         else:
             new_m = Prophet(interval_width=0.95, daily_seasonality=True)
-            # todo thinking about new data appending and visualization
             new_m.fit(data.append(add_data), init=stan_init(m))
             prediction_periods = int(len(data) * forecast_coefficient)
             future = new_m.make_future_dataframe(periods=prediction_periods, freq='T')

@@ -10,7 +10,7 @@
 <body>
 <div class="options-class" style="position: relative;">
     <p>Please select schema, table and query type:</p>
-    <form id="init-form">
+    <form id="show-form">
         <label for="schemas">Schema</label>
         <select id="schemas">
         </select>
@@ -24,6 +24,9 @@
             <option value="UPDATE">update</option>
             <option value="DELETE">delete</option>
         </select>
+        <button type="submit">Show</button>
+    </form>
+    <form id="predict-form">
         <button type="submit">Predict</button>
     </form>
 </div>
@@ -34,9 +37,11 @@
 <script>
 
     window.addEventListener("load", function () {
-        const form = document.getElementById('init-form');
+        const form = document.getElementById('show-form');
         console.log('load listener')
         form.addEventListener('submit', e => sendData(e));
+        const predictForm = document.getElementById('predict-form');
+        predictForm.addEventListener('submit', e => startPrediction(e));
         fillData();
         const schemaSelect = document.getElementById('schemas');
         schemaSelect.addEventListener('change', fillTables);
@@ -85,9 +90,15 @@
     }
 
     function sendData(event) {
-        console.log('send data function')
+        console.log('send data function');
         event.preventDefault();
         chartIt();
+    }
+
+    function startPrediction(event) {
+        console.log('send prediction request');
+        event.preventDefault();
+        makePrediction();
     }
 
     async function chartIt() {
@@ -172,6 +183,13 @@
             return value > 0;
         });
         return {xs, ys, yhat}
+    }
+
+    async function makePrediction() {
+        const schema = document.getElementById('schemas').value;
+        const tableName = document.getElementById('tables').value;
+        const queryType = document.getElementById('qtypes').value;
+        const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
     }
 </script>
 </body>
