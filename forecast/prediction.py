@@ -73,14 +73,16 @@ def save_prediction_result(model_name, arr, predict):
 
 
 # method to read prediction values from csv files
-def read_prediction_result(model_file_prefix):
-    model_file_prefix = model_file_prefix + '.csv'
+def read_prediction_result(schema, table, query_type):
+    model_file_prefix = schema + '_' + table + '_' + query_type + '.csv'
     full_path = 'prediction_result/' + model_file_prefix
     if os.path.isfile(full_path):
         data = pd.read_csv(full_path, index_col=['ds'], parse_dates=['ds'])
-        return HttpResponse(resample_data(data).to_csv())
+        return HttpResponse(resample_data(data).to_csv(index=False))
     else:
-        return HttpResponse(status=404)
+        data = af.get_csv_file_with_pandas(schema, table, query_type)
+        data.columns = ['ds', 'value']
+        return HttpResponse(data.to_csv(index=False), content_type="text/plain;charset=UTF-8")
 
 
 def prepare_data(arr, predict):
@@ -103,6 +105,7 @@ def make_prediction(data=None, model_file_prefix='', schema='', table='', query_
         data = m.history
         last_date = max(data.ds)
         print(last_date)
+        # todo мы уже и так получаем актуальную статистику в data
         add_data = af.get_csv_file_with_pandas(schema, table, query_type)
         if add_data is None:
             return m.history

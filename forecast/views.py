@@ -55,6 +55,5 @@ def get_prediction_result(request):
         schema_name = request.GET.get('schemaName')
         table_name = request.GET.get('tableName')
         query_type = request.GET.get('queryType')
-        model_prefix = schema_name + '_' + table_name + '_' + query_type
-        return pr.read_prediction_result(model_prefix)
+        return pr.read_prediction_result(schema_name, table_name, query_type)
     return render(request, 'forecast.html')

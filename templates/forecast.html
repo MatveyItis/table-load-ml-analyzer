@@ -6,6 +6,9 @@
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <title>Forecasting in action!</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"
+            integrity="sha512-rKFvwjvE4liWPlFnvH4ZhRDfNZ9FOpdkD/BU5gAIA3VS3vOQrQ5BjKgbO3kxebKhHdHcNUHLqxQYSoxee9UwgA=="
+            crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="options-class" style="position: relative;">
@@ -164,7 +167,25 @@
         const response = await fetch('forecast/result?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
         const data = await response.text();
 
-        const cols = data.split('\n').slice(0, 1);
+
+        const result = Papa.parse(data, {
+            "delimiter": ",",
+            "newline": "\n",
+            "header": true
+        });
+
+        result.data.forEach(row => {
+            xs.push(row.ds);
+            if (row.value !== '0') {
+                ys.push(row.value);
+            }
+            if (row.yhat !== undefined) {
+                yhat.push(row.yhat);
+            }
+        });
+        console.log(result.meta);
+
+       {% comment %} const cols = data.split('\n').slice(0, 1);
         console.log(cols)
         const table = data.split('\n').slice(1);
         table.forEach(row => {
@@ -178,7 +199,7 @@
             const yh = cols[15];
             yhat.push(yh);
             //console.log(time, value, yh);
-        });
+        });{% endcomment %}
         ys.filter(function (value, index, arr) {
             return value > 0;
         });
