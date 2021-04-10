@@ -5,35 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge">
     <title>Forecasting in action!</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+          integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"
             integrity="sha512-rKFvwjvE4liWPlFnvH4ZhRDfNZ9FOpdkD/BU5gAIA3VS3vOQrQ5BjKgbO3kxebKhHdHcNUHLqxQYSoxee9UwgA=="
             crossorigin="anonymous"></script>
 </head>
 <body>
-<div class="options-class" style="position: relative;">
-    <p>Please select schema, table and query type:</p>
-    <form id="show-form">
-        <label for="schemas">Schema</label>
-        <select id="schemas">
-        </select>
-        <label for="tables">Table</label>
-        <select id="tables">
-        </select>
-        <label for="qtypes">Query</label>
-        <select id="qtypes">
-            <option value="SELECT">select</option>
-            <option value="INSERT">insert</option>
-            <option value="UPDATE">update</option>
-            <option value="DELETE">delete</option>
-        </select>
-        <button type="submit">Show</button>
-    </form>
-    <form id="predict-form">
-        <button type="submit">Predict</button>
-    </form>
+<nav class="navbar navbar-expand-lg shadow navbar-light" style="background-color: #e3f2fd;">
+    <a class="navbar-brand" href="#">TForecasting</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item active">
+                <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">Features</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">Graphics</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<div class="row shadow-sm bg-white rounded m-3">
+    <div class="col-10 p-3">
+        <form id="show-form">
+            <div class="form-inline">
+                <div class="col-3 form-group">
+                    <label class="col-form-label mr-2" for="schemas">Schema</label>
+                    <select class="form-control" id="schemas">
+                    </select>
+                </div>
+                <div class="col-3 form-group">
+                    <label class="col-form-label mr-2" for="tables">Table</label>
+                    <select class="form-control" id="tables">
+                    </select>
+                </div>
+                <div class="col-2 form-group">
+                    <label class="col-form-label mr-2" for="qtypes">Query</label>
+                    <select class="form-control" id="qtypes">
+                        <option value="SELECT">select</option>
+                        <option value="INSERT">insert</option>
+                        <option value="UPDATE">update</option>
+                        <option value="DELETE">delete</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Show</button>
+            </div>
+        </form>
+    </div>
+    <div class="col-2 p-3">
+        <form id="predict-form">
+            <button type="submit" class="btn btn-secondary">Predict</button>
+        </form>
+    </div>
 </div>
-<div>
+<div class="shadow-sm m-3">
     <canvas id="chart" width="600" height="300"></canvas>
 </div>
 
@@ -183,23 +216,24 @@
                 yhat.push(row.yhat);
             }
         });
+        console.log("xs array = ", xs);
         console.log(result.meta);
 
-       {% comment %} const cols = data.split('\n').slice(0, 1);
-        console.log(cols)
-        const table = data.split('\n').slice(1);
-        table.forEach(row => {
-            const cols = row.split(',');
-            const time = cols[0];
-            xs.push(time)
-            const value = cols[16];
-            if (value !== '0') {
-                ys.push(value)
-            }
-            const yh = cols[15];
-            yhat.push(yh);
-            //console.log(time, value, yh);
-        });{% endcomment %}
+        {% comment %} const cols = data.split('\n').slice(0, 1);
+         console.log(cols)
+         const table = data.split('\n').slice(1);
+         table.forEach(row => {
+             const cols = row.split(',');
+             const time = cols[0];
+             xs.push(time)
+             const value = cols[16];
+             if (value !== '0') {
+                 ys.push(value)
+             }
+             const yh = cols[15];
+             yhat.push(yh);
+             //console.log(time, value, yh);
+         });{% endcomment %}
         ys.filter(function (value, index, arr) {
             return value > 0;
         });
@@ -213,5 +247,14 @@
         const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
     }
 </script>
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
+        integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
 </body>
 </html>

@@ -78,7 +78,7 @@ def read_prediction_result(schema, table, query_type):
     full_path = 'prediction_result/' + model_file_prefix
     if os.path.isfile(full_path):
         data = pd.read_csv(full_path, index_col=['ds'], parse_dates=['ds'])
-        return HttpResponse(resample_data(data).to_csv(index=False))
+        return HttpResponse(resample_data(data).to_csv())
     else:
         data = af.get_csv_file_with_pandas(schema, table, query_type)
         data.columns = ['ds', 'value']
