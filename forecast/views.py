@@ -45,7 +45,8 @@ def forecast_data(request):
         schema_name = request.GET.get('schemaName')
         table_name = request.GET.get('tableName')
         query_type = request.GET.get('queryType')
-        pr.start_learning(schema_name, table_name, query_type)
+        period = request.GET.get('period')
+        pr.start_learning(schema_name, table_name, query_type, period)
         return HttpResponse(status=201)
     return render(request, 'forecast.html')
 

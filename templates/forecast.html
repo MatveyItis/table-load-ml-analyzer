@@ -34,7 +34,7 @@
     </div>
 </nav>
 <div class="row shadow-sm bg-white rounded m-3">
-    <div class="col-10 p-3">
+    <div class="col-9 p-3">
         <form id="show-form">
             <div class="form-inline">
                 <div class="col-3 form-group">
@@ -42,7 +42,7 @@
                     <select class="form-control" id="schemas">
                     </select>
                 </div>
-                <div class="col-3 form-group">
+                <div class="col-4 form-group">
                     <label class="col-form-label mr-2" for="tables">Table</label>
                     <select class="form-control" id="tables">
                     </select>
@@ -56,13 +56,28 @@
                         <option value="DELETE">delete</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary">Show</button>
+                <button type="submit" id="show-button" class="btn btn-primary">Show</button>
             </div>
         </form>
     </div>
-    <div class="col-2 p-3">
+    <div class="col-3 p-3">
         <form id="predict-form">
-            <button type="submit" class="btn btn-secondary">Predict</button>
+            <div class="form-inline">
+                <div class="col-6 form-group">
+                    <label class="col-form-label mr-2" for="period">Period</label>
+                    <select class="form-control" id="period">
+                        <option value="1h">1 hour</option>
+                        <option value="3h">3 hour</option>
+                        <option value="6h">6 hour</option>
+                        <option value="12h">12 hour</option>
+                        <option value="1d">1 day</option>
+                        <option value="3d">3 day</option>
+                        <option value="7d">7 day</option>
+                        <option value="14d">14 day</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-secondary">Predict</button>
+            </div>
         </form>
     </div>
 </div>
@@ -143,6 +158,9 @@
         if (existingChart !== undefined) {
             existingChart.config.data.datasets[0].data = data.ys;
             existingChart.config.data.datasets[1].data = data.yhat;
+            //existingChart.config.data.datasets[2].data = data.yhatLower;
+            //existingChart.config.data.datasets[3].data = data.yhatUpper;
+            existingChart.config.data.labels = data.xs;
             existingChart.update();
         } else {
             const canvas = document.getElementById('chart');
@@ -168,7 +186,19 @@
                         backgroundColor: 'rgba(246, 71, 71, 0.5)',
                         borderColor: 'rgba(246, 71, 71, 1)',
                         borderWidth: 1
-                    }]
+                    }, {% comment %}{
+                        label: 'Y lower',
+                        data: data.yhatLower,
+                        fill: false,
+                        backgroundColor: 'rgba(6,6,19,0.5)',
+                        borderColor: 'rgba(6,6,19,1)'
+                    }, {
+                        label: 'Y upper',
+                        data: data.yhatUpper,
+                        fill: false,
+                        backgroundColor: 'rgba(31,31,224,0.5)',
+                        borderColor: 'rgba(31,31,224,0.8)'
+                    }{% endcomment %}]
                 },
                 options: {
                     scales: {
@@ -190,8 +220,10 @@
 
     async function getData() {
         const xs = []
-        const ys = []
+        let ys = []
         const yhat = []
+        const yhatLower = []
+        const yhatUpper = []
 
         const schema = document.getElementById('schemas').value;
         const tableName = document.getElementById('tables').value;
@@ -199,7 +231,6 @@
         //const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
         const response = await fetch('forecast/result?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
         const data = await response.text();
-
 
         const result = Papa.parse(data, {
             "delimiter": ",",
@@ -209,42 +240,35 @@
 
         result.data.forEach(row => {
             xs.push(row.ds);
-            if (row.value !== '0') {
-                ys.push(row.value);
-            }
+            ys.push(row.value);
             if (row.yhat !== undefined) {
                 yhat.push(row.yhat);
             }
+            if (row.yhat_lower !== undefined) {
+                yhatLower.push(row.yhat_lower);
+            }
+            if (row.yhat_upper !== undefined) {
+                yhatUpper.push(row.yhat_upper);
+            }
         });
-        console.log("xs array = ", xs);
+        console.log("xs array size = ", xs.length);
         console.log(result.meta);
-
-        {% comment %} const cols = data.split('\n').slice(0, 1);
-         console.log(cols)
-         const table = data.split('\n').slice(1);
-         table.forEach(row => {
-             const cols = row.split(',');
-             const time = cols[0];
-             xs.push(time)
-             const value = cols[16];
-             if (value !== '0') {
-                 ys.push(value)
-             }
-             const yh = cols[15];
-             yhat.push(yh);
-             //console.log(time, value, yh);
-         });{% endcomment %}
-        ys.filter(function (value, index, arr) {
-            return value > 0;
+        ys = ys.filter(function (value, index, arr) {
+            return value !== '0.0';
         });
-        return {xs, ys, yhat}
+        return {xs, ys, yhat, yhatLower, yhatUpper}
     }
 
     async function makePrediction() {
         const schema = document.getElementById('schemas').value;
         const tableName = document.getElementById('tables').value;
         const queryType = document.getElementById('qtypes').value;
-        const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
+        const period = document.getElementById('period').value;
+        const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType + '&period=' + period);
+        const status = response.status;
+        if (status >= 200 || status < 300) {
+            document.getElementById('show-button').click();
+        }
     }
 </script>
 <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js"
