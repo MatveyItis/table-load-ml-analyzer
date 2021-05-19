@@ -35,7 +35,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'forecast',
+    'rest_framework_swagger',
+    'forecast'
 ]
 
 MIDDLEWARE = [

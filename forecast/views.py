@@ -2,7 +2,6 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import pandas as pd
-import os.path
 import csv
 from forecast import prediction as pr
 from forecast import analyzer_feign as af
@@ -12,10 +11,6 @@ pd.options.mode.chained_assignment = None
 
 def forecast(request):
     return render(request, 'forecast.html')
-
-
-def statistics_info(request):
-    return HttpResponse(af.get_statistics_info())
 
 
 def schema_info(request):
@@ -58,3 +53,7 @@ def get_prediction_result(request):
         query_type = request.GET.get('queryType')
         return pr.read_prediction_result(schema_name, table_name, query_type)
     return render(request, 'forecast.html')
+
+
+def get_model_configuration(request):
+    return render(request, 'model_configuration.html')
