@@ -37,18 +37,22 @@
     </div>
 </nav>
 <div class="row shadow-sm bg-white rounded m-3">
-    <div class="col-9 p-3">
-        <form id="show-form">
-            <div class="form-inline">
-                <div class="col-3 form-group">
+    <div class="col-10 p-3">
+        <form id="predict-form">
+            <div class="form-row">
+                <div class="col-2 form-group">
                     <label class="col-form-label mr-2" for="schemas">Schema</label>
                     <select class="form-control" id="schemas">
                     </select>
                 </div>
-                <div class="col-4 form-group">
+                <div class="col-2 form-group">
                     <label class="col-form-label mr-2" for="tables">Table</label>
                     <select class="form-control" id="tables">
                     </select>
+                </div>
+                <div class="col-2 form-group">
+                    <label class="col-form-label mr-2" for="startDate">Start Date</label>
+                    <input class="form-control" id="startDate" type="date" required/>
                 </div>
                 <div class="col-2 form-group">
                     <label class="col-form-label mr-2" for="qtypes">Query</label>
@@ -59,15 +63,8 @@
                         <option value="DELETE">delete</option>
                     </select>
                 </div>
-                <button type="submit" id="show-button" class="btn btn-primary">Show</button>
-            </div>
-        </form>
-    </div>
-    <div class="col-3 p-3">
-        <form id="predict-form">
-            <div class="form-inline">
-                <div class="col-6 form-group">
-                    <label class="col-form-label mr-2" for="period">Period</label>
+                <div class="col-2 form-group">
+                    <label class="col-form-label mr-2" for="period">Prediction period</label>
                     <select class="form-control" id="period">
                         <option value="1h">1 hour</option>
                         <option value="3h">3 hour</option>
@@ -79,7 +76,20 @@
                         <option value="14d">14 day</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-secondary">Predict</button>
+                <div class="col-1 mt-2 form-group">
+                    <label class="col-form-label mr-2" for="predict" style="font-size: 11px">Click to predict</label>
+                    <button type="submit" id="predict" class="btn btn-secondary">Predict</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-1 p-3">
+        <form id="show-form">
+            <div class="form-row">
+                <div class="mt-2 form-group">
+                    <label class="col-form-label mr-2" for="show-button" style="font-size: 11px">Show result</label>
+                    <button type="submit" id="show-button" class="btn btn-primary mr-2">Show</button>
+                </div>
             </div>
         </form>
     </div>
@@ -124,23 +134,27 @@
     }
 
     async function fillTables() {
-        const schemasElem = document.getElementById('schemas');
-        const selected = schemasElem.value;
-        const response = await fetch('/database/schema?schema=' + selected);
-        const data = await response.text();
-        const tables = data.substr(1, data.length - 2).split(',');
-        for (let i = 0; i < tables.length; i++) {
-            tables[i] = tables[i].substr(1, tables[i].length - 2);
+        try {
+            const schemasElem = document.getElementById('schemas');
+            const selected = schemasElem.value;
+            const response = await fetch('/database/schema?schema=' + selected);
+            const data = await response.text();
+            const tables = data.substr(1, data.length - 2).split(',');
+            for (let i = 0; i < tables.length; i++) {
+                tables[i] = tables[i].substr(1, tables[i].length - 2);
+            }
+            console.log(tables);
+            const tablesElem = document.getElementById('tables');
+            tablesElem.options.length = 0;
+            tables.forEach(function (item) {
+                const newOption = document.createElement("option");
+                newOption.text = item.toString();
+                newOption.value = item.toString();
+                tablesElem.add(newOption)
+            });
+        } catch (err) {
+            console.log(err)
         }
-        console.log(tables);
-        const tablesElem = document.getElementById('tables');
-        tablesElem.options.length = 0;
-        tables.forEach(function (item) {
-            const newOption = document.createElement("option");
-            newOption.text = item.toString();
-            newOption.value = item.toString();
-            tablesElem.add(newOption)
-        });
     }
 
     function sendData(event) {
@@ -189,19 +203,7 @@
                         backgroundColor: 'rgba(246, 71, 71, 0.5)',
                         borderColor: 'rgba(246, 71, 71, 1)',
                         borderWidth: 1
-                    }, {% comment %}{
-                        label: 'Y lower',
-                        data: data.yhatLower,
-                        fill: false,
-                        backgroundColor: 'rgba(6,6,19,0.5)',
-                        borderColor: 'rgba(6,6,19,1)'
-                    }, {
-                        label: 'Y upper',
-                        data: data.yhatUpper,
-                        fill: false,
-                        backgroundColor: 'rgba(31,31,224,0.5)',
-                        borderColor: 'rgba(31,31,224,0.8)'
-                    }{% endcomment %}]
+                    },]
                 },
                 options: {
                     scales: {
@@ -227,20 +229,19 @@
         const yhat = []
         const yhatLower = []
         const yhatUpper = []
-
         const schema = document.getElementById('schemas').value;
         const tableName = document.getElementById('tables').value;
         const queryType = document.getElementById('qtypes').value;
-        //const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
-        const response = await fetch('forecast/result?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType);
+        const startDate = document.getElementById('startDate').value;
+        //const endDate = document.getElementById('endDate').value;
+        const response = await fetch('forecast/result?' +
+            'schemaName=' + schema +
+            '&tableName=' + tableName +
+            '&queryType=' + queryType +
+            '&startDate=' + startDate
+        );
         const data = await response.text();
-
-        const result = Papa.parse(data, {
-            "delimiter": ",",
-            "newline": "\n",
-            "header": true
-        });
-
+        const result = Papa.parse(data, {"delimiter": ",", "newline": "\n", "header": true});
         result.data.forEach(row => {
             xs.push(row.ds);
             ys.push(row.value);
@@ -254,8 +255,6 @@
                 yhatUpper.push(row.yhat_upper);
             }
         });
-        console.log("xs array size = ", xs.length);
-        console.log(result.meta);
         ys = ys.filter(function (value, index, arr) {
             return value !== '0.0';
         });
