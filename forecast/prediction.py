@@ -1,18 +1,16 @@
-import json
 import os
 import pandas as pd
 import time
+import redis
 from django.http import HttpResponse
 from fbprophet import Prophet
 from fbprophet.serialize import model_to_json, model_from_json
-from fbprophet.diagnostics import performance_metrics
-from fbprophet.diagnostics import cross_validation
 from multiprocessing import Process
 from . import analyzer_feign as af
 
 pd.options.mode.chained_assignment = None
 
-prefix_cache = 'saved_models/'
+prefix_cache = 'ml-cache-'
 forecast_coefficient = 0.3
 max_data_len_to_resample_in_minute = 2880
 
@@ -52,17 +50,14 @@ def stan_init(m):
     return res
 
 
-def load_model(file_name):
-    with open(prefix_cache + file_name, 'r') as fin:
-        return model_from_json(json.load(fin))
+def load_model(file_name, r):
+    key = prefix_cache + file_name
+    return model_from_json(r.get(key))
 
 
-def save_model(file_name, model):
+def save_model(file_name, model, r):
     file = prefix_cache + file_name
-    if os.path.isfile(file):
-        os.remove(file)
-    with open(file, 'w') as fout:
-        json.dump(model_to_json(model), fout)
+    r.mset({file: model_to_json(model)})
 
 
 def save_prediction_result(model_name, arr, predict):
@@ -81,14 +76,12 @@ def read_prediction_result(schema, table, query_type):
     full_path = 'prediction_result/' + model_file_prefix
     if os.path.isfile(full_path):
         data = pd.read_csv(full_path, index_col=['ds'], parse_dates=['ds'])
-        # return HttpResponse(resample_data(data).to_csv(), content_type="text/plain;charset=UTF-8")
         return HttpResponse(data.to_csv(), content_type="text/plain;charset=UTF-8")
     else:
         data = af.get_csv_file_with_pandas(schema, table, query_type)
         data.columns = ['ds', 'value']
         data = data.set_index(data['ds'])
         data.index = pd.to_datetime(data.index)
-        # return HttpResponse(resample_data(data).to_csv(), content_type="text/plain;charset=UTF-8")
         return HttpResponse(data.to_csv(), content_type="text/plain;charset=UTF-8")
 
 
@@ -110,9 +103,10 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
 
     model_file_name = model_file_prefix + '_model.json'
     print('Started prediction for model = ', model_file_name)
-    is_cache_existed = os.path.isfile('saved_models/' + model_file_name)
+    r = redis.Redis()
+    is_cache_existed = r.exists(prefix_cache + model_file_name)
     if is_cache_existed:
-        m = load_model(model_file_name)
+        m = load_model(model_file_name, r)
         data.columns = ['ds', 'y']
         new_m = create_prophet_model()
         new_m.fit(data, init=stan_init(m))
@@ -121,7 +115,7 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
         predict = new_m.predict(future)
         new_m.fit_kwargs['init']['delta'] = new_m.fit_kwargs['init']['delta'].tolist()
         new_m.fit_kwargs['init']['beta'] = new_m.fit_kwargs['init']['beta'].tolist()
-        save_model(model_file_name, new_m)
+        save_model(model_file_name, new_m, r)
         save_prediction_result(model_file_prefix, data.y, predict)
 
         end_time = time.time()
@@ -135,7 +129,7 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
         m.fit(data)
         future = m.make_future_dataframe(periods=prediction_periods, freq='T')
         predict = m.predict(future)
-        save_model(model_file_name, m)
+        save_model(model_file_name, m, r)
         save_prediction_result(model_file_prefix, data['y'], predict)
 
         end_time = time.time()
