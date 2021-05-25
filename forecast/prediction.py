@@ -107,6 +107,7 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
     is_cache_existed = r.exists(prefix_cache + model_file_name)
     if is_cache_existed:
         m = load_model(model_file_name, r)
+        print('loaded model ', m.params)
         data.columns = ['ds', 'y']
         new_m = create_prophet_model()
         new_m.fit(data, init=stan_init(m))
@@ -139,7 +140,7 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
 
 
 def create_prophet_model():
-    return Prophet(interval_width=0.9)
+    return Prophet()
 
 
 def resample_data(df):
