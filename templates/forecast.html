@@ -51,7 +51,7 @@
                     </select>
                 </div>
                 <div class="col-2 form-group">
-                    <label class="col-form-label mr-2" for="startDate">Start Date</label>
+                    <label class="col-form-label mr-2" for="startDate">Start date</label>
                     <input class="form-control" id="startDate" type="date" required/>
                 </div>
                 <div class="col-2 form-group">
@@ -190,14 +190,14 @@
                 data: {
                     labels: data.xs,
                     datasets: [{
-                        label: 'Load of table by select queries',
+                        label: 'Current load on the table',
                         data: data.ys,
                         fill: false,
                         backgroundColor: 'rgba(54, 162, 235, 0.2)',
                         borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 1
                     }, {
-                        label: 'Prediction value',
+                        label: 'Prediction table load value',
                         data: data.yhat,
                         fill: false,
                         backgroundColor: 'rgba(246, 71, 71, 0.5)',
@@ -266,7 +266,9 @@
         const tableName = document.getElementById('tables').value;
         const queryType = document.getElementById('qtypes').value;
         const period = document.getElementById('period').value;
-        const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName + '&queryType=' + queryType + '&period=' + period);
+        const startDate = document.getElementById('startDate').value;
+        const response = await fetch('forecast?schemaName=' + schema + '&tableName=' + tableName +
+            '&queryType=' + queryType + '&startDate=' + startDate + '&period=' + period);
         const status = response.status;
         if (status >= 200 || status < 300) {
             document.getElementById('show-button').click();

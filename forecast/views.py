@@ -40,8 +40,9 @@ def forecast_data(request):
         schema_name = request.GET.get('schemaName')
         table_name = request.GET.get('tableName')
         query_type = request.GET.get('queryType')
+        start_date = request.GET.get('startDate')
         period = request.GET.get('period')
-        pr.start_learning(schema_name, table_name, query_type, period)
+        pr.start_learning(schema_name, table_name, query_type, start_date, period)
         return HttpResponse(status=201)
     return render(request, 'forecast.html')
 
@@ -51,7 +52,8 @@ def get_prediction_result(request):
         schema_name = request.GET.get('schemaName')
         table_name = request.GET.get('tableName')
         query_type = request.GET.get('queryType')
-        return pr.read_prediction_result(schema_name, table_name, query_type)
+        start_date = request.GET.get('startDate')
+        return pr.read_prediction_result(schema_name, table_name, query_type, start_date)
     return render(request, 'forecast.html')
 
 
