@@ -3,8 +3,8 @@ import pandas as pd
 import time
 import redis
 from django.http import HttpResponse
-from fbprophet import Prophet
-from fbprophet.serialize import model_to_json, model_from_json
+from prophet import Prophet
+from prophet.serialize import model_to_json, model_from_json
 from multiprocessing import Process
 from . import analyzer_feign as af
 
