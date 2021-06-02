@@ -11,7 +11,6 @@ from . import analyzer_feign as af
 pd.options.mode.chained_assignment = None
 
 prefix_cache = 'ml-cache-'
-forecast_coefficient = 0.3
 max_data_len_to_resample_in_minute = 2880
 
 

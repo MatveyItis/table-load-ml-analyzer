@@ -1,7 +1,11 @@
 import http.client
 import pandas as pd
+import environ
 
-STAT_BACKEND_URL = 'localhost:2789'
+env = environ.Env()
+environ.Env.read_env()
+
+STAT_BACKEND_URL = env('STATISTICS_SERVICE_URL')
 
 
 def get_file_with_stat(schema, table, query_type):
@@ -19,8 +23,8 @@ def get_file_with_stat(schema, table, query_type):
 
 
 def get_csv_file_with_pandas(schema, table, query_type, start_date):
-    if 1 == 1:
-        return pd.read_csv('data/select_test.csv')
+    # if 1 == 1:
+    #     return pd.read_csv('data/select_test.csv')
     try:
         url = 'http://' + STAT_BACKEND_URL + '/statistics/file?schema=' + schema + '&table=' + table + \
               '&queryType=' + query_type + '&startDate=' + start_date + '&fileType=CSV'
