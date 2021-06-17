@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 import time
 import redis
 from django.http import HttpResponse
@@ -31,11 +32,21 @@ def start_learning(schema, table, query_type, start_date, period):
 def stan_init(m):
     print("called stan_init method")
     res = {}
+    print(m.params)
     for pname in ['k', 'm', 'sigma_obs']:
         res[pname] = m.params[pname][0][0]
     for pname in ['delta', 'beta']:
-        res[pname] = m.params[pname][0]
-    return res
+        try:
+            res[pname] = m.params[pname][0]
+        except RuntimeError:
+            print("Some parameters were not found")
+            print("result params = ", res)
+        finally:
+            return res
+
+
+def mape(y, y_pred):
+    return (1 - np.mean(np.abs((y - y_pred) / y))) * 100
 
 
 def load_model(file_name, r):
@@ -50,10 +61,11 @@ def save_model(file_name, model, r):
     r.mset({file: model_to_json(model)})
 
 
-def save_prediction_result(model_name, arr, predict):
+def save_prediction_result(model_name, arr, predict, mape):
     print(f"called save_prediction_result method for model = %s" % model_name)
     predict['value'] = '0'
     pr_val_col = predict['value']
+    predict['mape'] = mape
     i = 0
     for d in arr:
         pr_val_col[i] = d
@@ -97,17 +109,35 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
     r = redis.Redis()
     is_cache_existed = r.exists(prefix_cache + model_file_name)
     if is_cache_existed:
-        m = load_model(model_file_name, r)
+        loaded_m = load_model(model_file_name, r)
+
         data.columns = ['ds', 'y']
+        test_length = int(len(data) * 0.1)
+        df_train = data.iloc[:-test_length]
+        print(f'train set length = {len(df_train)}')
+        df_test = data.iloc[-test_length:]
+        print(f'test set length = {len(df_test)}')
+        m = create_prophet_model()
+        m.fit(df_train, init=stan_init(loaded_m))
+        future = m.make_future_dataframe(periods=test_length, freq='T')
+        predict = m.predict(future)
+        df_test['actual'] = predict.iloc[-test_length:].loc[:, 'yhat']
+        df_test.set_index('ds', inplace=True)
+        prophet_mape = mape(df_test['y'], df_test['actual'])
+        print("Model mape = ", prophet_mape)
+
         new_m = create_prophet_model()
         new_m.fit(data, init=stan_init(m))
         prediction_periods = resolve_prediction_periods(period)
-        future = new_m.make_future_dataframe(periods=prediction_periods, freq='T')
-        predict = new_m.predict(future)
+        result_future = new_m.make_future_dataframe(periods=prediction_periods, freq='T')
+        result_predict = new_m.predict(result_future)
         new_m.fit_kwargs['init']['delta'] = new_m.fit_kwargs['init']['delta'].tolist()
-        new_m.fit_kwargs['init']['beta'] = new_m.fit_kwargs['init']['beta'].tolist()
+        try:
+            new_m.fit_kwargs['init']['beta'] = new_m.fit_kwargs['init']['beta'].tolist()
+        except KeyError:
+            print("beta key not found")
         save_model(model_file_name, new_m, r)
-        save_prediction_result(model_file_prefix, data.y, predict)
+        save_prediction_result(model_file_prefix, data.y, result_predict, prophet_mape)
 
         end_time = time.time()
         print('Model with stan init learning time(ms) = ', (end_time - start_time) * 1000)
@@ -116,12 +146,26 @@ def make_prediction(data=None, model_file_prefix='', period='', schema='', table
     else:
         prediction_periods = resolve_prediction_periods(period)
         data.columns = ['ds', 'y']
+        test_length = int(len(data) * 0.1)
+        df_train = data.iloc[:-test_length]
+        print(f'train set length = {len(df_train)}')
+        df_test = data.iloc[-test_length:]
+        print(f'test set length = {len(df_test)}')
         m = create_prophet_model()
-        m.fit(data)
-        future = m.make_future_dataframe(periods=prediction_periods, freq='T')
+        m.fit(df_train)
+        future = m.make_future_dataframe(periods=test_length, freq='T')
         predict = m.predict(future)
-        save_model(model_file_name, m, r)
-        save_prediction_result(model_file_prefix, data['y'], predict)
+        df_test['actual'] = predict.iloc[-test_length:].loc[:, 'yhat']
+        df_test.set_index('ds', inplace=True)
+        prophet_mape = mape(df_test['y'], df_test['actual'])
+        print("Model mape = ", prophet_mape)
+        result_m = create_prophet_model()
+
+        result_m.fit(data, init=stan_init(m))
+        result_future = result_m.make_future_dataframe(periods=prediction_periods, freq='T')
+        result_predict = result_m.predict(result_future)
+        save_model(model_file_name, result_m, r)
+        save_prediction_result(model_file_prefix, data['y'], result_predict, prophet_mape)
 
         end_time = time.time()
         print('Model learning time(ms) = ', (end_time - start_time) * 1000)

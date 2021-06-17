@@ -93,6 +93,14 @@
             </div>
         </form>
     </div>
+    <div class="col-1 p-3">
+        <div class="form-row">
+            <div class="mt-1 form-group">
+                <label class="col-form-label mr-2" for="mape-result">Accuracy</label>
+                <input class="input-group" disabled id="mape-result" value="">
+            </div>
+        </div>
+    </div>
 </div>
 <div class="shadow-sm m-3">
     <canvas id="chart" width="600" height="300"></canvas>
@@ -179,6 +187,9 @@
             //existingChart.config.data.datasets[3].data = data.yhatUpper;
             existingChart.config.data.labels = data.xs;
             existingChart.update();
+            if (data.mape !== undefined) {
+                document.getElementById('mape-result').value = Number(data.mape).toFixed(2) + "%";
+            }
         } else {
             const canvas = document.getElementById('chart');
             const ctx = canvas.getContext('2d');
@@ -219,7 +230,11 @@
             }
             const myChart = new Chart(ctx, config);
             window.myCharts = [myChart];
+            console.log("mape = ", data.mape)
             console.log("Created chart");
+            if (data.mape !== undefined) {
+                document.getElementById('mape-result').value = Number(data.mape).toFixed(2) + "%";
+            }
         }
     }
 
@@ -242,7 +257,12 @@
         );
         const data = await response.text();
         const result = Papa.parse(data, {"delimiter": ",", "newline": "\n", "header": true});
+        let mape = undefined;
+        console.log(mape);
         result.data.forEach(row => {
+            if (mape === undefined) {
+                mape = row.mape;
+            }
             xs.push(row.ds);
             ys.push(row.value);
             if (row.yhat !== undefined) {
@@ -258,7 +278,7 @@
         ys = ys.filter(function (value, index, arr) {
             return value !== '0.0';
         });
-        return {xs, ys, yhat, yhatLower, yhatUpper}
+        return {xs, ys, yhat, yhatLower, yhatUpper, mape}
     }
 
     async function makePrediction() {
