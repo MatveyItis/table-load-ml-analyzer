@@ -23,8 +23,6 @@ def get_file_with_stat(schema, table, query_type):
 
 
 def get_csv_file_with_pandas(schema, table, query_type, start_date):
-    if 1 == 1:
-         return pd.read_csv('data/select.csv')
     try:
         url = 'http://' + STAT_BACKEND_URL + '/statistics/file?schema=' + schema + '&table=' + table + \
               '&queryType=' + query_type + '&startDate=' + start_date + '&fileType=CSV'
